@@ -55,9 +55,15 @@ public class Game extends Observable implements ContactListener {
     private final Set<Body> edges = new HashSet<>();
 
     @Getter
-    private final Set<Edge> oldedges = new HashSet<>();
+    private Set<Edge> oldedges = new HashSet<>();
 
-    private final Set<Vec2> vertices = new HashSet<>();
+    private Set<Vec2> vertices = new HashSet<>();
+
+    @Getter
+    private Set<Score> scores = new HashSet<>();
+
+    @Getter
+    private Set<Score> oldscores = new HashSet<>();
 
     private volatile boolean running = true;
     private volatile boolean generateRequested = true;
@@ -85,7 +91,7 @@ public class Game extends Observable implements ContactListener {
     private final Body ball;
     private final Fixture ballFixture;
 
-    private final Set<Body> dead = new HashSet<>();
+    private Set<Body> dead = new HashSet<>();
 
     public Game() {
         world = new World(new Vec2(0, 0), false);
@@ -136,10 +142,15 @@ public class Game extends Observable implements ContactListener {
                         edge.setDeathTick(tick);
                         b.setUserData(tick);
                     }
-                    dead.clear();
+                    dead = new HashSet<>();
                     if (ballStopped()) {
                         ball.setLinearVelocity(new Vec2(0, 0));
                         scorebase = 0;
+                        for (Score s : scores) {
+                            s.setDeathTick(tick);
+                        }
+                        oldscores.addAll(scores);
+                        scores = new HashSet<>();
                     }
                     if (cleared() && ballStopped()) {
                         log.info("next level");
@@ -172,7 +183,9 @@ public class Game extends Observable implements ContactListener {
     private void generateLevel() {
         score += shots * 10;
         shots = 10 + level / 5;
-        oldedges.clear();
+        oldedges = new HashSet<>();
+        oldscores = scores;
+        scores = new HashSet<>();
         List<Vec2> roots = new ArrayList<>();
         for (int i = 0; i < level + 1; i++) {
             Vec2 p = randomPosition();
@@ -233,7 +246,7 @@ public class Game extends Observable implements ContactListener {
     }
 
     public void clear() {
-        vertices.clear();
+        vertices = new HashSet<>();
         dead.addAll(edges);
     }
 
@@ -263,15 +276,18 @@ public class Game extends Observable implements ContactListener {
     public void endContact(Contact contact) {
         Fixture a = contact.getFixtureA();
         Fixture b = contact.getFixtureB();
+        Body scored = null;
         if (ballFixture != a && !sides.contains(a)) {
-            dead.add(a.getBody());
-            scorebase++;
-            score += scorebase;
+            scored = a.getBody();
+        } else if (ballFixture != b && !sides.contains(b)) {
+            scored = b.getBody();
         }
-        if (ballFixture != b && !sides.contains(b)) {
-            dead.add(b.getBody());
+        if (scored != null) {
+            dead.add(scored);
             scorebase++;
             score += scorebase;
+            Vec2 p = scored.getWorldPoint(contact.getManifold().localPoint);
+            scores.add(new Score(p, scorebase));
         }
     }
 

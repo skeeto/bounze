@@ -3,6 +3,7 @@ package bounze;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Graphics;
 import java.awt.RenderingHints;
@@ -37,6 +38,10 @@ public class GamePanel extends JComponent
     private static final Color BACK = new Color(  0, 102, 153);
     private static final Color FORE = new Color(255, 255, 255);
     private static final Color FILL = new Color(  0,  51, 153);
+    private static final Color SCORE = Color.BLACK;
+
+    private static final Font SCORE_FONT
+        = new Font(Font.SANS_SERIF, Font.BOLD, 1);
 
     public static final float SCALE = 10;
     private static final Stroke STROKE = new BasicStroke((2f / SCALE));
@@ -99,6 +104,25 @@ public class GamePanel extends JComponent
                 g.setColor(new Color(FORE.getRed(), FORE.getGreen(),
                                      FORE.getBlue(), alpha));
                 drawEdge(g, e);
+            }
+        }
+
+        g.setFont(SCORE_FONT);
+        g.setColor(SCORE);
+        for (Score s : game.getScores()) {
+            Vec2 pos = s.getPosition();
+            g.drawString("+" + s.getScore(), pos.x, pos.y);
+        }
+
+        for (Score s : game.getOldscores()) {
+            int age = (int) (game.getTick() - s.getDeathTick());
+            if (age < Game.FPS) {
+                int alpha = 255 - age * 255 / Game.FPS;
+                Color c = new Color(SCORE.getRed(), SCORE.getGreen(),
+                                    SCORE.getBlue(), alpha);
+                g.setColor(c);
+                Vec2 pos = s.getPosition();
+                g.drawString("+" + s.getScore(), pos.x, pos.y);
             }
         }
 

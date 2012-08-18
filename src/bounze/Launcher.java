@@ -1,6 +1,8 @@
 package bounze;
 
+import javax.swing.BoxLayout;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 import lombok.extern.java.Log;
 
 @Log
@@ -15,9 +17,16 @@ public class Launcher {
         }
 
         Game game = new Game();
-        GamePanel panel = new GamePanel(game);
+        GamePanel view = new GamePanel(game);
+        ScorePanel score = new ScorePanel(game);
         JFrame frame = new JFrame("Bounze");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setResizable(false);
+        JPanel panel = new JPanel();
+        BoxLayout layout = new BoxLayout(panel, BoxLayout.Y_AXIS);
+        panel.setLayout(layout);
+        panel.add(score);
+        panel.add(view);
         frame.add(panel);
         frame.pack();
         frame.setVisible(true);

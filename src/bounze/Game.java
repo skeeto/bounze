@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
+import lombok.extern.java.Log;
 import lombok.val;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.ContactListener;
@@ -26,6 +27,7 @@ import org.jbox2d.dynamics.FixtureDef;
 import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.contacts.Contact;
 
+@Log
 public class Game extends Observable implements ContactListener {
 
     public static final int FPS = 30;
@@ -65,6 +67,12 @@ public class Game extends Observable implements ContactListener {
 
     @Getter
     private long tick = 0;
+
+    @Getter
+    private int score = 0;
+
+    @Getter
+    private int shots = 0;
 
     @Getter
     private int level = 0;
@@ -132,11 +140,12 @@ public class Game extends Observable implements ContactListener {
                         ball.setLinearVelocity(new Vec2(0, 0));
                     }
                     if (cleared() && ballStopped()) {
-                        System.out.println("Next level");
+                        log.info("next level");
                         level++;
                         generate();
                     }
                     if (generateRequested) {
+                        log.info("level generate");
                         clear();
                         generateLevel();
                     }
@@ -159,6 +168,7 @@ public class Game extends Observable implements ContactListener {
     }
 
     private void generateLevel() {
+        shots = 10 + level / 5;
         oldedges.clear();
         List<Vec2> roots = new ArrayList<>();
         for (int i = 0; i < level + 1; i++) {

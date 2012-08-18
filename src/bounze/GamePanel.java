@@ -20,6 +20,7 @@ import java.util.Observer;
 import javax.swing.JComponent;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
 import lombok.val;
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
@@ -28,6 +29,7 @@ import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.Body;
 import org.jbox2d.dynamics.Fixture;
 
+@Log
 @SuppressWarnings("serial")
 public class GamePanel extends JComponent
     implements Observer, MouseMotionListener, MouseListener, KeyListener {
@@ -36,7 +38,7 @@ public class GamePanel extends JComponent
     private static final Color FORE = new Color(255, 255, 255);
     private static final Color FILL = new Color(  0,  51, 153);
 
-    private static final float SCALE = 10;
+    public static final float SCALE = 10;
     private static final Stroke STROKE = new BasicStroke((2f / SCALE));
 
     private final Game game;

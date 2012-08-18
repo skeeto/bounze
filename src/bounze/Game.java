@@ -24,10 +24,12 @@ public class Game extends Observable {
     public static final int WIDTH = 64;
     public static final int HEIGHT = 48;
 
-    private static final float BALL_RADIUS = 1f;
+    private static final float BALL_RADIUS = 1.5f;
     private static final float BALL_DENSITY = 1f;
     private static final float BALL_FRICTION = 0f;
-    private static final float BALL_RESTITUTION = 0.3f;
+    private static final float BALL_RESTITUTION = 0.85f;
+    private static final float BALL_DAMPING = 0.5f;
+    private static final float BALL_CUTOFF = 3.0f;
 
     @Getter
     private final World world;
@@ -36,7 +38,7 @@ public class Game extends Observable {
         = Executors.newSingleThreadScheduledExecutor();
 
     @Getter
-    private final Body ball = null;
+    private final Body ball;
 
     public Game() {
         world = new World(new Vec2(0, 0), false);
@@ -62,16 +64,23 @@ public class Game extends Observable {
         val ballbody = new BodyDef();
         ballbody.position = new Vec2(WIDTH / 2, HEIGHT / 2);
         ballbody.type = BodyType.DYNAMIC;
+        ballbody.linearDamping = BALL_DAMPING;
         val ballfix = new FixtureDef();
         ballfix.shape = ballshape;
         ballfix.density = BALL_DENSITY;
         ballfix.friction = BALL_FRICTION;
         ballfix.restitution = BALL_RESTITUTION;
-        world.createBody(ballbody).createFixture(ballfix);
+        ball = world.createBody(ballbody);
+        ball.createFixture(ballfix);
+
+        ball.setLinearVelocity(new Vec2(50f, 20f));
 
         exec.scheduleAtFixedRate(new Runnable() {
                 public void run() {
                     world.step(1f / FPS, V_ITERATIONS, P_ITERATIONS);
+                    if (ball.getLinearVelocity().length() < BALL_CUTOFF) {
+                        ball.setLinearVelocity(new Vec2(0, 0));
+                    }
                     setChanged();
                     notifyObservers();
                 }

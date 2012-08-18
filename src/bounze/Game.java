@@ -1,5 +1,6 @@
 package bounze;
 
+import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,7 +28,7 @@ import org.jbox2d.dynamics.contacts.Contact;
 
 public class Game extends Observable implements ContactListener {
 
-    private static final int FPS = 30;
+    public static final int FPS = 30;
     private static final int V_ITERATIONS = 8;
     private static final int P_ITERATIONS = 3;
 
@@ -47,7 +48,13 @@ public class Game extends Observable implements ContactListener {
     private static final float MIN_EDGE = Math.max(WIDTH, HEIGHT) / 16;
 
     private final Set<Fixture> sides = new HashSet<>();
+
+    @Getter
     private final Set<Body> edges = new HashSet<>();
+
+    @Getter
+    private final Set<Edge> oldedges = new HashSet<>();
+
     private final Set<Vec2> vertices = new HashSet<>();
 
     private volatile boolean running = true;
@@ -55,6 +62,9 @@ public class Game extends Observable implements ContactListener {
 
     @Getter
     private final World world;
+
+    @Getter
+    private long tick = 0;
 
     @Getter
     private int level = 1;
@@ -108,9 +118,14 @@ public class Game extends Observable implements ContactListener {
                         return;
                     }
                     world.step(1f / FPS, V_ITERATIONS, P_ITERATIONS);
+                    tick++;
                     for (Body b : dead) {
                         world.destroyBody(b);
                         edges.remove(b);
+                        Edge edge = (Edge) b.getUserData();
+                        oldedges.add(edge);
+                        edge.setDeathTick(tick);
+                        b.setUserData(tick);
                     }
                     dead.clear();
                     if (ballStopped()) {
@@ -144,6 +159,7 @@ public class Game extends Observable implements ContactListener {
     }
 
     private void generateLevel() {
+        oldedges.clear();
         List<Vec2> roots = new ArrayList<>();
         for (int i = 0; i < level + 1; i++) {
             Vec2 p = randomPosition();
@@ -191,15 +207,16 @@ public class Game extends Observable implements ContactListener {
     }
 
     private void addEdge(Vec2 a, Vec2 b) {
-            val shape = new PolygonShape();
-            shape.setAsEdge(a, b);
-            val body = world.createBody(new BodyDef());
-            if (body != null) {
-                edges.add(body);
-                body.createFixture(shape, 0f);
-                vertices.add(a);
-                vertices.add(b);
-            }
+        val shape = new PolygonShape();
+        shape.setAsEdge(a, b);
+        val body = world.createBody(new BodyDef());
+        if (body != null) {
+            edges.add(body);
+            body.createFixture(shape, 0f);
+            vertices.add(a);
+            vertices.add(b);
+            body.setUserData(new Edge(a, b));
+        }
     }
 
     public void clear() {

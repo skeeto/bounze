@@ -73,45 +73,31 @@ public class GamePanel extends JComponent
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                            RenderingHints.VALUE_ANTIALIAS_ON);
 
-        Body body = game.getWorld().getBodyList();
-        while (body != null) {
+        g.setColor(FORE);
+        for (Body body : game.getEdges()) {
             Vec2 pos = body.getPosition();
             float angle = body.getAngle();
             Fixture fixture = body.getFixtureList();
             while (fixture != null) {
                 Shape shape = fixture.getShape();
-                if (shape instanceof CircleShape) {
-                    double x = pos.x;
-                    double y = pos.y;
-                    double r = shape.m_radius;
-                    val circle
-                        = new Ellipse2D.Double(x - r, y - r, r * 2, r * 2);
-                    g.setColor(FILL);
-                    g.fill(circle);
-                    g.setColor(FORE);
-                    g.draw(circle);
-                } else if (shape instanceof PolygonShape) {
-                    PolygonShape s = (PolygonShape) shape;
-                    Path2D path = new Path2D.Float();
-                    Vec2 first = s.getVertex(0);
-                    path.moveTo(first.x, first.y);
-                    for (int i = 1; i < s.getVertexCount(); i++) {
-                        Vec2 v = s.getVertex(i);
-                        path.lineTo(v.x, v.y);
-                    }
-                    //path.closePath();
-                    AffineTransform at = new AffineTransform();
-                    at.translate(pos.x, pos.y);
-                    at.rotate(angle);
-                    g.setColor(FORE);
-                    g.draw(at.createTransformedShape(path));
-                } else {
-                    System.out.println("Cannot draw shape: " + shape);
-                }
+                draw(g, (PolygonShape) shape, pos, angle);
                 fixture = fixture.getNext();
             }
-            body = body.getNext();
         }
+
+        for (Edge e : game.getOldedges()) {
+            int age = (int) (game.getTick() - e.getDeathTick());
+            if (age < Game.FPS) {
+                int alpha = 255 - age * 255 / Game.FPS;
+                g.setColor(new Color(FORE.getRed(), FORE.getGreen(),
+                                     FORE.getBlue(), alpha));
+                drawEdge(g, e);
+            }
+        }
+
+        Body ball = game.getBall();
+        Fixture ballfix = ball.getFixtureList();
+        draw(g, (CircleShape) ballfix.getShape(), ball.getPosition());
 
         if (game.ballStopped()) {
             AffineTransform at = new AffineTransform();
@@ -120,6 +106,38 @@ public class GamePanel extends JComponent
             at.rotate(Math.atan2(mouseLast.y - pos.y, mouseLast.x - pos.x));
             g.draw(at.createTransformedShape(pointer));
         }
+    }
+
+    private void drawEdge(Graphics2D g, Edge e) {
+        Path2D line = new Path2D.Float();
+        line.moveTo(e.getA().x, e.getA().y);
+        line.lineTo(e.getB().x, e.getB().y);
+        g.draw(line);
+    }
+
+    private void draw(Graphics2D g, CircleShape s, Vec2 pos) {
+        double x = pos.x;
+        double y = pos.y;
+        double r = s.m_radius;
+        val circle = new Ellipse2D.Double(x - r, y - r, r * 2, r * 2);
+        g.setColor(FILL);
+        g.fill(circle);
+        g.setColor(FORE);
+        g.draw(circle);
+    }
+
+    private void draw(Graphics2D g, PolygonShape s, Vec2 pos, float angle) {
+        Path2D path = new Path2D.Float();
+        Vec2 first = s.getVertex(0);
+        path.moveTo(first.x, first.y);
+        for (int i = 1; i < s.getVertexCount(); i++) {
+            Vec2 v = s.getVertex(i);
+            path.lineTo(v.x, v.y);
+        }
+        AffineTransform at = new AffineTransform();
+        at.translate(pos.x, pos.y);
+        at.rotate(angle);
+        g.draw(at.createTransformedShape(path));
     }
 
     @Override

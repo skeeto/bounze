@@ -48,8 +48,8 @@ public class GamePanel extends JComponent
 
     public GamePanel(Game game) {
         this.game = game;
-        Dimension d = new Dimension((int) (Game.WIDTH * SCALE + 1),
-                                    (int) (Game.HEIGHT * SCALE + 1));
+        Dimension d = new Dimension((int) (Game.WIDTH * SCALE),
+                                    (int) (Game.HEIGHT * SCALE));
         setPreferredSize(d);
 
         pointer.moveTo(3, 1);
@@ -68,10 +68,15 @@ public class GamePanel extends JComponent
         g.setColor(BACK);
         g.fillRect(0, 0, getWidth(), getHeight());
 
-        g.setStroke(STROKE);
-        g.scale(SCALE, SCALE);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                            RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g.setColor(FORE);
+        g.setStroke(new BasicStroke(2));
+        g.drawRect(1, 1, getWidth() - 2, getHeight() - 2);
+
+        g.setStroke(STROKE);
+        g.scale(SCALE, SCALE);
 
         g.setColor(FORE);
         for (Body body : game.getEdges()) {

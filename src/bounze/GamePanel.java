@@ -225,6 +225,8 @@ public class GamePanel extends JComponent
     public void keyTyped(KeyEvent e) {
         if (e.getKeyChar() == 'g') {
             game.generate();
+        } else if (e.getKeyChar() == 'r') {
+            game.reset();
         }
     }
 }

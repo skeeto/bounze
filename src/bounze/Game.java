@@ -115,7 +115,7 @@ public class Game extends Observable implements ContactListener {
         val ballshape = new CircleShape();
         ballshape.m_radius = BALL_RADIUS;
         val ballbody = new BodyDef();
-        ballbody.position = randomPosition();
+        ballbody.position = new Vec2(WIDTH / 2, HEIGHT / 2);
         ballbody.type = BodyType.DYNAMIC;
         ballbody.linearDamping = BALL_DAMPING;
         val ballfix = new FixtureDef();
@@ -248,6 +248,18 @@ public class Game extends Observable implements ContactListener {
     public void clear() {
         vertices = new HashSet<>();
         dead.addAll(edges);
+    }
+
+
+    public void reset() {
+        score = 0;
+        shots = 0;
+        scorebase = 0;
+        clear();
+        ball.setTransform(new Vec2(WIDTH / 2, HEIGHT / 2), 0f);
+        ball.setLinearVelocity(new Vec2(0, 0));
+        level = 0;
+        generate();
     }
 
     public boolean cleared() {

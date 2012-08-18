@@ -46,7 +46,8 @@ public class GamePanel extends JComponent
 
     public GamePanel(Game game) {
         this.game = game;
-        Dimension d = new Dimension(Game.WIDTH * SCALE, Game.HEIGHT * SCALE);
+        Dimension d = new Dimension(Game.WIDTH * SCALE + 1,
+                                    Game.HEIGHT * SCALE + 1);
         setPreferredSize(d);
 
         pointer.moveTo(3, 1);

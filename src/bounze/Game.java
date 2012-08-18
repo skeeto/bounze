@@ -65,6 +65,9 @@ public class Game extends Observable implements ContactListener {
     @Getter
     private Set<Score> oldscores = new HashSet<>();
 
+    @Getter
+    private boolean gameOver = false;
+
     private volatile boolean running = true;
     private volatile boolean generateRequested = true;
 
@@ -162,6 +165,9 @@ public class Game extends Observable implements ContactListener {
                         clear();
                         generateLevel();
                     }
+                    if (ballStopped() && shots == 0 && level > 0) {
+                        gameOver = true;
+                    }
                     setChanged();
                     notifyObservers();
                 }
@@ -252,6 +258,7 @@ public class Game extends Observable implements ContactListener {
 
 
     public void reset() {
+        gameOver = false;
         score = 0;
         shots = 0;
         scorebase = 0;

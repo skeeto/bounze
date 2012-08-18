@@ -4,6 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Graphics;
 import java.awt.RenderingHints;
@@ -42,6 +43,8 @@ public class GamePanel extends JComponent
 
     private static final Font SCORE_FONT
         = new Font(Font.SANS_SERIF, Font.BOLD, 1);
+    private static final Font GAME_OVER_FONT
+        = new Font(Font.SANS_SERIF, Font.PLAIN, 3);
 
     public static final float SCALE = 10;
     private static final Stroke STROKE = new BasicStroke((2f / SCALE));
@@ -130,12 +133,22 @@ public class GamePanel extends JComponent
         Fixture ballfix = ball.getFixtureList();
         draw(g, (CircleShape) ballfix.getShape(), ball.getPosition());
 
-        if (game.ballStopped()) {
+        if (game.ballStopped() && !game.isGameOver()) {
             AffineTransform at = new AffineTransform();
             Vec2 pos = game.getBall().getPosition();
             at.translate(pos.x, pos.y);
             at.rotate(Math.atan2(mouseLast.y - pos.y, mouseLast.x - pos.x));
             g.draw(at.createTransformedShape(pointer));
+        }
+
+        if (game.isGameOver()) {
+            String msg = "Game Over";
+            log.info(msg);
+            g.setColor(SCORE);
+            g.setFont(GAME_OVER_FONT);
+            FontMetrics fm = g.getFontMetrics();
+            g.drawString(msg, Game.WIDTH / 2 - fm.stringWidth(msg) / 2,
+                         2 * Game.HEIGHT / 3);
         }
     }
 
@@ -201,7 +214,9 @@ public class GamePanel extends JComponent
 
     @Override
     public void mousePressed(MouseEvent e) {
-        if (game.ballStopped()) {
+        if (game.isGameOver()) {
+            game.reset();
+        } else if (game.ballStopped()) {
             Vec2 pos = game.getBall().getPosition();
             Vec2 dir = new Vec2(e.getX() / SCALE - pos.x,
                                 e.getY() / SCALE - pos.y);

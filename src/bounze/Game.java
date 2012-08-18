@@ -44,6 +44,8 @@ public class Game extends Observable implements ContactListener {
 
     private final Set<Fixture> edges = new HashSet<>();
 
+    private volatile boolean running = true;
+
     @Getter
     private final World world;
 
@@ -94,6 +96,9 @@ public class Game extends Observable implements ContactListener {
         world.setContactListener(this);
         exec.scheduleAtFixedRate(new Runnable() {
                 public void run() {
+                    if (!running) {
+                        return;
+                    }
                     world.step(1f / FPS, V_ITERATIONS, P_ITERATIONS);
                     for (Body b : dead) {
                         world.destroyBody(b);
@@ -106,6 +111,14 @@ public class Game extends Observable implements ContactListener {
                     notifyObservers();
                 }
             }, 0L, (long) (1000.0 / FPS), TimeUnit.MILLISECONDS);
+    }
+
+    public void start() {
+        running = true;
+    }
+
+    public void stop() {
+        running = false;
     }
 
     private void generateLevel(int n) {

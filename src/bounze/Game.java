@@ -1,6 +1,7 @@
 package bounze;
 
 import java.util.Observable;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,8 @@ public class Game extends Observable {
     private static final float BALL_DAMPING = 0.5f;
     private static final float BALL_CUTOFF = 3.0f;
     private static final float BALL_VELOCITY = 60.0f;
+
+    private static final Random RNG = new Random();
 
     @Getter
     private final World world;
@@ -74,7 +77,7 @@ public class Game extends Observable {
         ball = world.createBody(ballbody);
         ball.createFixture(ballfix);
 
-        //ball.setLinearVelocity(new Vec2(50f, 20f));
+        generateLevel(8);
 
         exec.scheduleAtFixedRate(new Runnable() {
                 public void run() {
@@ -86,6 +89,18 @@ public class Game extends Observable {
                     notifyObservers();
                 }
             }, 0L, (long) (1000.0 / FPS), TimeUnit.MILLISECONDS);
+    }
+
+    private void generateLevel(int n) {
+        for (int i = 0; i < n; i++) {
+            val shape = new PolygonShape();
+            shape.setAsEdge(randomPosition(), randomPosition());
+            world.createBody(new BodyDef()).createFixture(shape, 0f);
+        }
+    }
+
+    private Vec2 randomPosition() {
+        return new Vec2(RNG.nextFloat() * WIDTH, RNG.nextFloat() * HEIGHT);
     }
 
     public boolean ballStopped() {

@@ -35,7 +35,7 @@ public class GamePanel extends JComponent
     private static final Color FILL = new Color(  0,  51, 153);
 
     private static final int SCALE = 10;
-    private static final Stroke STROKE = new BasicStroke((3f / SCALE));
+    private static final Stroke STROKE = new BasicStroke((2f / SCALE));
 
     private final Game game;
 
@@ -77,7 +77,6 @@ public class GamePanel extends JComponent
             while (fixture != null) {
                 Shape shape = fixture.getShape();
                 if (shape instanceof CircleShape) {
-                    //draw(g, pos, (CircleShape) shape);
                     double x = pos.x;
                     double y = pos.y;
                     double r = shape.m_radius;
@@ -88,7 +87,20 @@ public class GamePanel extends JComponent
                     g.setColor(FORE);
                     g.draw(circle);
                 } else if (shape instanceof PolygonShape) {
-                    //draw(g, pos, angle, (PolygonShape) shape);
+                    PolygonShape s = (PolygonShape) shape;
+                    Path2D path = new Path2D.Float();
+                    Vec2 first = s.getVertex(0);
+                    path.moveTo(first.x, first.y);
+                    for (int i = 1; i < s.getVertexCount(); i++) {
+                        Vec2 v = s.getVertex(i);
+                        path.lineTo(v.x, v.y);
+                    }
+                    //path.closePath();
+                    AffineTransform at = new AffineTransform();
+                    at.translate(pos.x, pos.y);
+                    at.rotate(angle);
+                    g.setColor(FORE);
+                    g.draw(at.createTransformedShape(path));
                 } else {
                     System.out.println("Cannot draw shape: " + shape);
                 }

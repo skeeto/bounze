@@ -39,8 +39,8 @@ public class Game extends Observable implements ContactListener {
     private static final float BALL_DENSITY = 1f;
     private static final float BALL_FRICTION = 0f;
     private static final float BALL_RESTITUTION = 0.85f;
-    private static final float BALL_DAMPING = 0.5f;
-    private static final float BALL_CUTOFF = 3.0f;
+    private static final float BALL_DAMPING = 0.7f;
+    private static final float BALL_CUTOFF = 5.0f;
     private static final float BALL_VELOCITY = 60.0f;
 
     private static final Random RNG = new Random();

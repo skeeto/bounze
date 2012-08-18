@@ -7,6 +7,8 @@ import java.awt.Graphics2D;
 import java.awt.Graphics;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -28,7 +30,7 @@ import org.jbox2d.dynamics.Fixture;
 
 @SuppressWarnings("serial")
 public class GamePanel extends JComponent
-    implements Observer, MouseMotionListener, MouseListener {
+    implements Observer, MouseMotionListener, MouseListener, KeyListener {
 
     private static final Color BACK = new Color(  0, 102, 153);
     private static final Color FORE = new Color(255, 255, 255);
@@ -56,6 +58,7 @@ public class GamePanel extends JComponent
 
         addMouseListener(this);
         addMouseMotionListener(this);
+        addKeyListener(this);
         game.addObserver(this);
     }
 
@@ -121,6 +124,7 @@ public class GamePanel extends JComponent
 
     @Override
     public void update(Observable o, Object arg) {
+        requestFocusInWindow();
         repaint();
     }
 
@@ -158,5 +162,21 @@ public class GamePanel extends JComponent
 
     @Override
     public void mouseReleased(MouseEvent e) {
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+        if (e.getKeyChar() == 'g') {
+            game.clear();
+            game.generate(8);
+        }
     }
 }

@@ -42,7 +42,8 @@ public class Game extends Observable implements ContactListener {
 
     private static final Random RNG = new Random();
 
-    private final Set<Fixture> edges = new HashSet<>();
+    private final Set<Fixture> sides = new HashSet<>();
+    private final Set<Body> edges = new HashSet<>();
 
     private volatile boolean running = true;
 
@@ -63,19 +64,19 @@ public class Game extends Observable implements ContactListener {
 
         val top = new PolygonShape();
         top.setAsEdge(new Vec2(0, 0), new Vec2(WIDTH, 0));
-        edges.add(world.createBody(new BodyDef()).createFixture(top, 0f));
+        sides.add(world.createBody(new BodyDef()).createFixture(top, 0f));
 
         val bottom = new PolygonShape();
         bottom.setAsEdge(new Vec2(0, HEIGHT), new Vec2(WIDTH, HEIGHT));
-        edges.add(world.createBody(new BodyDef()).createFixture(bottom, 0f));
+        sides.add(world.createBody(new BodyDef()).createFixture(bottom, 0f));
 
         val left = new PolygonShape();
         left.setAsEdge(new Vec2(0, 0), new Vec2(0, HEIGHT));
-        edges.add(world.createBody(new BodyDef()).createFixture(left, 0f));
+        sides.add(world.createBody(new BodyDef()).createFixture(left, 0f));
 
         val right = new PolygonShape();
         right.setAsEdge(new Vec2(WIDTH, 0), new Vec2(WIDTH, HEIGHT));
-        edges.add(world.createBody(new BodyDef()).createFixture(right, 0f));
+        sides.add(world.createBody(new BodyDef()).createFixture(right, 0f));
 
         val ballshape = new CircleShape();
         ballshape.m_radius = BALL_RADIUS;
@@ -91,7 +92,7 @@ public class Game extends Observable implements ContactListener {
         ball = world.createBody(ballbody);
         ballFixture = ball.createFixture(ballfix);
 
-        generateLevel(8);
+        generate(28);
 
         world.setContactListener(this);
         exec.scheduleAtFixedRate(new Runnable() {
@@ -102,6 +103,7 @@ public class Game extends Observable implements ContactListener {
                     world.step(1f / FPS, V_ITERATIONS, P_ITERATIONS);
                     for (Body b : dead) {
                         world.destroyBody(b);
+                        edges.remove(b);
                     }
                     dead.clear();
                     if (ballStopped()) {
@@ -121,12 +123,22 @@ public class Game extends Observable implements ContactListener {
         running = false;
     }
 
-    private void generateLevel(int n) {
+    public void generate(int n) {
         for (int i = 0; i < n; i++) {
             val shape = new PolygonShape();
             shape.setAsEdge(randomPosition(), randomPosition());
-            world.createBody(new BodyDef()).createFixture(shape, 0f);
+            val body = world.createBody(new BodyDef());
+            edges.add(body);
+            body.createFixture(shape, 0f);
         }
+    }
+
+    public void clear() {
+        dead.addAll(edges);
+    }
+
+    public boolean cleaed() {
+        return edges.isEmpty();
     }
 
     private Vec2 randomPosition() {
@@ -150,10 +162,10 @@ public class Game extends Observable implements ContactListener {
     public void endContact(Contact contact) {
         Fixture a = contact.getFixtureA();
         Fixture b = contact.getFixtureB();
-        if (ballFixture != a && !edges.contains(a)) {
+        if (ballFixture != a && !sides.contains(a)) {
             dead.add(a.getBody());
         }
-        if (ballFixture != b && !edges.contains(b)) {
+        if (ballFixture != b && !sides.contains(b)) {
             dead.add(b.getBody());
         }
     }

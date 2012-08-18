@@ -67,7 +67,7 @@ public class Game extends Observable implements ContactListener {
     private long tick = 0;
 
     @Getter
-    private int level = 1;
+    private int level = 0;
 
     private final ScheduledExecutorService exec
         = Executors.newSingleThreadScheduledExecutor();

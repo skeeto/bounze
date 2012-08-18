@@ -36,7 +36,7 @@ public class GamePanel extends JComponent
     private static final Color FORE = new Color(255, 255, 255);
     private static final Color FILL = new Color(  0,  51, 153);
 
-    private static final int SCALE = 10;
+    private static final float SCALE = 10;
     private static final Stroke STROKE = new BasicStroke((2f / SCALE));
 
     private final Game game;
@@ -48,8 +48,8 @@ public class GamePanel extends JComponent
 
     public GamePanel(Game game) {
         this.game = game;
-        Dimension d = new Dimension(Game.WIDTH * SCALE + 1,
-                                    Game.HEIGHT * SCALE + 1);
+        Dimension d = new Dimension((int) (Game.WIDTH * SCALE + 1),
+                                    (int) (Game.HEIGHT * SCALE + 1));
         setPreferredSize(d);
 
         pointer.moveTo(3, 1);

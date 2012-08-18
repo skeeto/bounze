@@ -175,8 +175,7 @@ public class GamePanel extends JComponent
     @Override
     public void keyTyped(KeyEvent e) {
         if (e.getKeyChar() == 'g') {
-            game.clear();
-            game.generate(8);
+            game.generate();
         }
     }
 }

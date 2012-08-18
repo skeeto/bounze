@@ -1,6 +1,8 @@
 package bounze;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Observable;
 import java.util.Random;
 import java.util.Set;
@@ -29,8 +31,8 @@ public class Game extends Observable implements ContactListener {
     private static final int V_ITERATIONS = 8;
     private static final int P_ITERATIONS = 3;
 
-    public static final int WIDTH = 64;
-    public static final int HEIGHT = 48;
+    public static final int WIDTH = 56;
+    public static final int HEIGHT = 36;
 
     private static final float BALL_RADIUS = 1.25f;
     private static final float BALL_DENSITY = 1f;
@@ -42,13 +44,20 @@ public class Game extends Observable implements ContactListener {
 
     private static final Random RNG = new Random();
 
+    private static final float MIN_EDGE = Math.max(WIDTH, HEIGHT) / 16;
+
     private final Set<Fixture> sides = new HashSet<>();
     private final Set<Body> edges = new HashSet<>();
+    private final Set<Vec2> vertices = new HashSet<>();
 
     private volatile boolean running = true;
+    private volatile boolean generateRequested = true;
 
     @Getter
     private final World world;
+
+    @Getter
+    private int level = 1;
 
     private final ScheduledExecutorService exec
         = Executors.newSingleThreadScheduledExecutor();
@@ -81,7 +90,7 @@ public class Game extends Observable implements ContactListener {
         val ballshape = new CircleShape();
         ballshape.m_radius = BALL_RADIUS;
         val ballbody = new BodyDef();
-        ballbody.position = new Vec2(WIDTH / 2, HEIGHT / 2);
+        ballbody.position = randomPosition();
         ballbody.type = BodyType.DYNAMIC;
         ballbody.linearDamping = BALL_DAMPING;
         val ballfix = new FixtureDef();
@@ -91,8 +100,6 @@ public class Game extends Observable implements ContactListener {
         ballfix.restitution = BALL_RESTITUTION;
         ball = world.createBody(ballbody);
         ballFixture = ball.createFixture(ballfix);
-
-        generate(28);
 
         world.setContactListener(this);
         exec.scheduleAtFixedRate(new Runnable() {
@@ -109,6 +116,15 @@ public class Game extends Observable implements ContactListener {
                     if (ballStopped()) {
                         ball.setLinearVelocity(new Vec2(0, 0));
                     }
+                    if (cleared() && ballStopped()) {
+                        System.out.println("Next level");
+                        level++;
+                        generate();
+                    }
+                    if (generateRequested) {
+                        clear();
+                        generateLevel();
+                    }
                     setChanged();
                     notifyObservers();
                 }
@@ -123,21 +139,75 @@ public class Game extends Observable implements ContactListener {
         running = false;
     }
 
-    public void generate(int n) {
-        for (int i = 0; i < n; i++) {
-            val shape = new PolygonShape();
-            shape.setAsEdge(randomPosition(), randomPosition());
-            val body = world.createBody(new BodyDef());
-            edges.add(body);
-            body.createFixture(shape, 0f);
+    public void generate() {
+        generateRequested = true;
+    }
+
+    private void generateLevel() {
+        List<Vec2> roots = new ArrayList<>();
+        for (int i = 0; i < level + 1; i++) {
+            Vec2 p = randomPosition();
+            roots.add(p);
+            if (i > 0) {
+                addEdge(roots.get(i - 1), roots.get(i));
+            }
+        }
+        for (Vec2 v : roots) {
+            spider(v, 0.8);
+            spider(v, 0.8);
+        }
+        generateRequested = false;
+    }
+
+    private boolean inBounds(Vec2 p) {
+        return p.x > 0 && p.x < WIDTH && p.y > 0 && p.y < HEIGHT;
+    }
+
+    private boolean nearVertex(Vec2 p) {
+        for (Vec2 v : vertices) {
+            if (v.sub(p).length() < MIN_EDGE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void spider(Vec2 p, double prob) {
+        Vec2 end = null;
+        double dist, angle;
+        int giveup = 0;
+        do {
+            if (giveup++ > 16) return;
+            angle = RNG.nextFloat() * Math.PI * 2f;
+            dist = RNG.nextGaussian() * prob
+                * Math.min(WIDTH, HEIGHT) / 4;
+            end = new Vec2((float) (Math.cos(angle) * dist),
+                           (float) (Math.sin(angle) * dist)).add(p);
+        } while (dist < MIN_EDGE || !inBounds(end) || nearVertex(end));
+        addEdge(p, end);
+        if (RNG.nextDouble() < prob) {
+            spider(end, prob / 2);
         }
     }
 
+    private void addEdge(Vec2 a, Vec2 b) {
+            val shape = new PolygonShape();
+            shape.setAsEdge(a, b);
+            val body = world.createBody(new BodyDef());
+            if (body != null) {
+                edges.add(body);
+                body.createFixture(shape, 0f);
+                vertices.add(a);
+                vertices.add(b);
+            }
+    }
+
     public void clear() {
+        vertices.clear();
         dead.addAll(edges);
     }
 
-    public boolean cleaed() {
+    public boolean cleared() {
         return edges.isEmpty();
     }
 

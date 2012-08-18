@@ -170,6 +170,7 @@ public class Game extends Observable implements ContactListener {
     }
 
     private void generateLevel() {
+        score += shots * 10;
         shots = 10 + level / 5;
         oldedges.clear();
         List<Vec2> roots = new ArrayList<>();

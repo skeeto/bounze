@@ -70,6 +70,7 @@ public class Game extends Observable implements ContactListener {
 
     @Getter
     private int score = 0;
+    private int scorebase = 0;
 
     @Getter
     private int shots = 0;
@@ -138,6 +139,7 @@ public class Game extends Observable implements ContactListener {
                     dead.clear();
                     if (ballStopped()) {
                         ball.setLinearVelocity(new Vec2(0, 0));
+                        scorebase = 0;
                     }
                     if (cleared() && ballStopped()) {
                         log.info("next level");
@@ -247,6 +249,7 @@ public class Game extends Observable implements ContactListener {
     }
 
     public void shoot(Vec2 dir) {
+        shots--;
         dir.normalize();
         ball.setLinearVelocity(dir.mul(BALL_VELOCITY));
     }
@@ -261,9 +264,13 @@ public class Game extends Observable implements ContactListener {
         Fixture b = contact.getFixtureB();
         if (ballFixture != a && !sides.contains(a)) {
             dead.add(a.getBody());
+            scorebase++;
+            score += scorebase;
         }
         if (ballFixture != b && !sides.contains(b)) {
             dead.add(b.getBody());
+            scorebase++;
+            score += scorebase;
         }
     }
 

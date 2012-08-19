@@ -59,6 +59,7 @@ public final class Game extends Observable implements ContactListener {
 
     /** Minimum edge length. */
     private static final float MIN_EDGE = Math.max(WIDTH, HEIGHT) / 16;
+    private static final float PAD = 3;
 
     /** Active edges in the world. */
     @Getter
@@ -248,7 +249,8 @@ public final class Game extends Observable implements ContactListener {
      * @return true if the point is inside the world
      */
     private boolean inBounds(final Vec2 p) {
-        return p.x > 0 && p.x < WIDTH && p.y > 0 && p.y < HEIGHT;
+        return p.x > PAD && p.x < WIDTH - PAD
+            && p.y > PAD && p.y < HEIGHT - PAD;
     }
 
     /**

@@ -229,7 +229,7 @@ public final class Game extends Observable implements ContactListener {
         deadScores = liveScores;
         liveScores = HashTreePSet.empty();
         List<Vec2> roots = new ArrayList<Vec2>();
-        for (int i = 0; i < level + 1; i++) {
+        for (int i = 0; i < Math.sqrt(level) + 1; i++) {
             Vec2 p = randomPosition();
             roots.add(p);
             if (i > 0) {

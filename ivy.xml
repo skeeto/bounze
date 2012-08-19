@@ -11,6 +11,7 @@
     <!-- Run -->
     <dependency org="com.googlecode.playn" name="playn-jbox2d" rev="1.0.3"
                 conf="default"/>
+    <dependency org="org.pcollections" name="pcollections" rev="2.1.2"/>
 
     <!-- Build -->
     <dependency org="org.projectlombok" name="lombok" rev="0.10.4"

@@ -13,8 +13,11 @@ import java.util.Observable;
 import java.util.Observer;
 import javax.swing.JComponent;
 
+/**
+ * Displays a game's score, level, and shots information.
+ */
 @SuppressWarnings("serial")
-public class ScorePanel extends JComponent implements Observer {
+public final class ScorePanel extends JComponent implements Observer {
 
     private static final Color BACK = Color.BLACK;
     private static final Color LABEL = new Color(255, 255, 255);
@@ -30,7 +33,11 @@ public class ScorePanel extends JComponent implements Observer {
 
     private final Game game;
 
-    public ScorePanel(Game game) {
+    /**
+     * Create a new panel displaying a game.
+     * @param game  the game to display
+     */
+    public ScorePanel(final Game game) {
         this.game = game;
         Dimension d = new Dimension((int) (Game.WIDTH * GamePanel.SCALE),
                                     HEIGHT);
@@ -39,7 +46,7 @@ public class ScorePanel extends JComponent implements Observer {
     }
 
     @Override
-    public void paintComponent(Graphics graphics) {
+    public void paintComponent(final Graphics graphics) {
         Graphics2D g = (Graphics2D) graphics;
         g.setColor(BACK);
         g.fillRect(0, 0, getWidth(), getHeight());
@@ -86,7 +93,7 @@ public class ScorePanel extends JComponent implements Observer {
     }
 
     @Override
-    public void update(Observable o, Object arg) {
+    public void update(final Observable o, final Object arg) {
         repaint();
     }
 }

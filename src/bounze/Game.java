@@ -1,12 +1,9 @@
 package bounze;
 
-import java.awt.geom.Path2D;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -26,17 +23,29 @@ import org.jbox2d.dynamics.Fixture;
 import org.jbox2d.dynamics.FixtureDef;
 import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.contacts.Contact;
+import org.pcollections.HashTreePSet;
+import org.pcollections.PSet;
 
+/**
+ * An instance of a game of Bounze. Can be restarted when the game ends.
+ */
 @Log
-public class Game extends Observable implements ContactListener {
+public final class Game extends Observable implements ContactListener {
 
+    /** Frames per second.  */
     public static final int FPS = 30;
+
+    /* JBox2D parameters. */
     private static final int V_ITERATIONS = 8;
     private static final int P_ITERATIONS = 3;
 
+    /** World width. */
     public static final int WIDTH = 56;
+
+    /** World height. */
     public static final int HEIGHT = 36;
 
+    /* JBox2D ball parameters. */
     private static final float BALL_RADIUS = 1.25f;
     private static final float BALL_DENSITY = 1f;
     private static final float BALL_FRICTION = 0f;
@@ -45,76 +54,99 @@ public class Game extends Observable implements ContactListener {
     private static final float BALL_CUTOFF = 5.0f;
     private static final float BALL_VELOCITY = 60.0f;
 
+    /** Priavte random number generator. */
     private static final Random RNG = new Random();
 
+    /** Minimum edge length. */
     private static final float MIN_EDGE = Math.max(WIDTH, HEIGHT) / 16;
 
-    private final Set<Fixture> sides = new HashSet<>();
-
+    /** Active edges in the world. */
     @Getter
-    private final Set<Body> edges = new HashSet<>();
+    private PSet<Edge> liveEdges = HashTreePSet.empty();
 
+    /** Inactive edges of the world. */
     @Getter
-    private Set<Edge> oldedges = new HashSet<>();
+    private PSet<Edge> deadEdges = HashTreePSet.empty();
 
-    private Set<Vec2> vertices = new HashSet<>();
+    /** Vertices of the current level. */
+    private PSet<Vec2> vertices = HashTreePSet.empty();
 
+    /** Active fading floating scores. */
     @Getter
-    private Set<Score> scores = new HashSet<>();
+    private PSet<Score> liveScores = HashTreePSet.empty();
 
+    /** Inactive fading floating scores. */
     @Getter
-    private Set<Score> oldscores = new HashSet<>();
+    private PSet<Score> deadScores = HashTreePSet.empty();
 
+    /** True if the game has ended. */
     @Getter
     private boolean gameOver = false;
 
+    /** True if the game is currently running. */
     private volatile boolean running = true;
+
+    /** True if a level generation is requested. */
     private volatile boolean generateRequested = true;
 
+    /** The JBox2D world. */
     @Getter
     private final World world;
 
+    /** The step counter. */
     @Getter
     private long tick = 0;
 
+    /** Current player score. */
     @Getter
     private int score = 0;
+
+    /** Current base score counter: score increases by this for each hit. */
     private int scorebase = 0;
 
+    /** Number of shots left. */
     @Getter
     private int shots = 0;
 
+    /** Current level number. */
     @Getter
     private int level = 0;
 
+    /** Thread that drives the simulation forward. */
     private final ScheduledExecutorService exec
         = Executors.newSingleThreadScheduledExecutor();
 
+    /** The game ball -- interactive with by the player. */
     @Getter
     private final Body ball;
+
+    /** The ball's JBox2D fixture. */
     private final Fixture ballFixture;
 
-    private Set<Body> dead = new HashSet<>();
+    /** Bodies to be removed before the next simulation step. */
+    private PSet<Body> dead = HashTreePSet.empty();
 
+    /**
+     * Create a new game instance.
+     */
     public Game() {
         world = new World(new Vec2(0, 0), false);
 
+        /* Create world edges. */
         val top = new PolygonShape();
         top.setAsEdge(new Vec2(0, 0), new Vec2(WIDTH, 0));
-        sides.add(world.createBody(new BodyDef()).createFixture(top, 0f));
-
+        world.createBody(new BodyDef()).createFixture(top, 0f);
         val bottom = new PolygonShape();
         bottom.setAsEdge(new Vec2(0, HEIGHT), new Vec2(WIDTH, HEIGHT));
-        sides.add(world.createBody(new BodyDef()).createFixture(bottom, 0f));
-
+        world.createBody(new BodyDef()).createFixture(bottom, 0f);
         val left = new PolygonShape();
         left.setAsEdge(new Vec2(0, 0), new Vec2(0, HEIGHT));
-        sides.add(world.createBody(new BodyDef()).createFixture(left, 0f));
-
+        world.createBody(new BodyDef()).createFixture(left, 0f);
         val right = new PolygonShape();
         right.setAsEdge(new Vec2(WIDTH, 0), new Vec2(WIDTH, HEIGHT));
-        sides.add(world.createBody(new BodyDef()).createFixture(right, 0f));
+        world.createBody(new BodyDef()).createFixture(right, 0f);
 
+        /* Set up the ball. */
         val ballshape = new CircleShape();
         ballshape.m_radius = BALL_RADIUS;
         val ballbody = new BodyDef();
@@ -129,6 +161,7 @@ public class Game extends Observable implements ContactListener {
         ball = world.createBody(ballbody);
         ballFixture = ball.createFixture(ballfix);
 
+        /* Set up the simulation thread. */
         world.setContactListener(this);
         exec.scheduleAtFixedRate(new Runnable() {
                 public void run() {
@@ -139,21 +172,20 @@ public class Game extends Observable implements ContactListener {
                     tick++;
                     for (Body b : dead) {
                         world.destroyBody(b);
-                        edges.remove(b);
                         Edge edge = (Edge) b.getUserData();
-                        oldedges.add(edge);
+                        liveEdges = liveEdges.minus(edge);
+                        deadEdges = deadEdges.plus(edge);
                         edge.setDeathTick(tick);
-                        b.setUserData(tick);
                     }
-                    dead = new HashSet<>();
+                    dead = HashTreePSet.empty();
                     if (ballStopped()) {
                         ball.setLinearVelocity(new Vec2(0, 0));
                         scorebase = 0;
-                        for (Score s : scores) {
+                        for (Score s : liveScores) {
                             s.setDeathTick(tick);
                         }
-                        oldscores.addAll(scores);
-                        scores = new HashSet<>();
+                        deadScores = deadScores.plusAll(liveScores);
+                        liveScores = HashTreePSet.empty();
                     }
                     if (cleared() && ballStopped()) {
                         log.info("next level");
@@ -174,25 +206,29 @@ public class Game extends Observable implements ContactListener {
             }, 0L, (long) (1000.0 / FPS), TimeUnit.MILLISECONDS);
     }
 
+    /** Run the simulation. */
     public void start() {
         running = true;
     }
 
+    /** Pause the simulation. */
     public void stop() {
         running = false;
     }
 
+    /** Generate a new level (asynchronously). */
     public void generate() {
         generateRequested = true;
     }
 
+    /** Generate a new level -- must be run by the simulation thread. */
     private void generateLevel() {
         score += shots * 10;
         shots = 10 + level / 5;
-        oldedges = new HashSet<>();
-        oldscores = scores;
-        scores = new HashSet<>();
-        List<Vec2> roots = new ArrayList<>();
+        deadEdges = HashTreePSet.empty();
+        deadScores = liveScores;
+        liveScores = HashTreePSet.empty();
+        List<Vec2> roots = new ArrayList<Vec2>();
         for (int i = 0; i < level + 1; i++) {
             Vec2 p = randomPosition();
             roots.add(p);
@@ -207,11 +243,20 @@ public class Game extends Observable implements ContactListener {
         generateRequested = false;
     }
 
-    private boolean inBounds(Vec2 p) {
+    /** Return true of the point is inside the world.
+     * @param p  the point to test
+     * @return true if the point is inside the world
+     */
+    private boolean inBounds(final Vec2 p) {
         return p.x > 0 && p.x < WIDTH && p.y > 0 && p.y < HEIGHT;
     }
 
-    private boolean nearVertex(Vec2 p) {
+    /**
+     * Check to see if this point is close to an existing point.
+     * @param p  the point to test
+     * @return true if the point is near an existing point
+     */
+    private boolean nearVertex(final Vec2 p) {
         for (Vec2 v : vertices) {
             if (v.sub(p).length() < MIN_EDGE) {
                 return true;
@@ -220,12 +265,19 @@ public class Game extends Observable implements ContactListener {
         return false;
     }
 
-    private void spider(Vec2 p, double prob) {
+    /**
+     * Create a sprawling chain of edges.
+     * @param p     the root point
+     * @param prob  the probability of continuing
+     */
+    private void spider(final Vec2 p, final double prob) {
         Vec2 end = null;
         double dist, angle;
         int giveup = 0;
         do {
-            if (giveup++ > 16) return;
+            if (giveup++ > 16) {
+                return;
+            }
             angle = RNG.nextFloat() * Math.PI * 2f;
             dist = RNG.nextGaussian() * prob
                 * Math.min(WIDTH, HEIGHT) / 4;
@@ -238,25 +290,39 @@ public class Game extends Observable implements ContactListener {
         }
     }
 
-    private void addEdge(Vec2 a, Vec2 b) {
+    /**
+     * Add an edge to the world.
+     * @param a  the start point
+     * @param b  the end point
+     */
+    private void addEdge(final Vec2 a, final Vec2 b) {
         val shape = new PolygonShape();
         shape.setAsEdge(a, b);
         val body = world.createBody(new BodyDef());
         if (body != null) {
-            edges.add(body);
             body.createFixture(shape, 0f);
-            vertices.add(a);
-            vertices.add(b);
-            body.setUserData(new Edge(a, b));
+            vertices = vertices.plus(a);
+            vertices = vertices.plus(b);
+            Edge edge = new Edge(a, b, body);
+            body.setUserData(edge);
+            liveEdges = liveEdges.plus(edge);
         }
     }
 
+    /**
+     * Clear all edges from the map.
+     */
     public void clear() {
-        vertices = new HashSet<>();
-        dead.addAll(edges);
+        vertices = HashTreePSet.empty();
+        for (Edge e : liveEdges) {
+            dead = dead.plus(e.getBody());
+        }
     }
 
 
+    /**
+     * Reset the game (i.e. after a game over).
+     */
     public void reset() {
         gameOver = false;
         score = 0;
@@ -269,52 +335,70 @@ public class Game extends Observable implements ContactListener {
         generate();
     }
 
+    /**
+     * Return true if all the edges have been cleared.
+     * @return true if no edges remain
+     */
     public boolean cleared() {
-        return edges.isEmpty();
+        return liveEdges.isEmpty();
     }
 
+    /**
+     * Return a uniformly distributed random position in the world.
+     * @return a random world position
+     */
     private Vec2 randomPosition() {
         return new Vec2(RNG.nextFloat() * WIDTH, RNG.nextFloat() * HEIGHT);
     }
 
+    /**
+     * Return true if the ball is not moving.
+     * @return true if the ball is not moving
+     */
     public boolean ballStopped() {
         return ball.getLinearVelocity().length() < BALL_CUTOFF;
     }
 
-    public void shoot(Vec2 dir) {
+    /**
+     * Shoot the ball in a direction.
+     * @param dir  the direction to shoot the ball
+     */
+    public void shoot(final Vec2 dir) {
         shots--;
         dir.normalize();
         ball.setLinearVelocity(dir.mul(BALL_VELOCITY));
     }
 
     @Override
-    public void beginContact(Contact contact) {
+    public void beginContact(final Contact contact) {
     }
 
     @Override
-    public void endContact(Contact contact) {
-        Fixture a = contact.getFixtureA();
-        Fixture b = contact.getFixtureB();
+    public void endContact(final Contact contact) {
+        Body a = contact.getFixtureA().getBody();
+        Body b = contact.getFixtureB().getBody();
         Body scored = null;
-        if (ballFixture != a && !sides.contains(a)) {
-            scored = a.getBody();
-        } else if (ballFixture != b && !sides.contains(b)) {
-            scored = b.getBody();
+        Object ad = a.getUserData();
+        Object bd = b.getUserData();
+        if (ad != null && liveEdges.contains((Edge) ad)) {
+            scored = a;
+        } else if (bd != null && liveEdges.contains((Edge) bd)) {
+            scored = b;
         }
         if (scored != null) {
-            dead.add(scored);
+            dead = dead.plus(scored);
             scorebase++;
             score += scorebase;
             Vec2 p = scored.getWorldPoint(contact.getManifold().localPoint);
-            scores.add(new Score(p, scorebase));
+            liveScores = liveScores.plus(new Score(p, scorebase));
         }
     }
 
     @Override
-    public void postSolve(Contact contact, ContactImpulse impulse) {
+    public void postSolve(final Contact contact, final ContactImpulse impulse) {
     }
 
     @Override
-    public void preSolve(Contact contact, Manifold oldManifold) {
+    public void preSolve(final Contact contact, final Manifold oldManifold) {
     }
 }

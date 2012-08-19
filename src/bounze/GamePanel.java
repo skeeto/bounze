@@ -21,24 +21,24 @@ import java.util.Observable;
 import java.util.Observer;
 import javax.swing.JComponent;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import lombok.val;
 import org.jbox2d.collision.shapes.CircleShape;
-import org.jbox2d.collision.shapes.PolygonShape;
-import org.jbox2d.collision.shapes.Shape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.Body;
 import org.jbox2d.dynamics.Fixture;
 
+/**
+ * Display the state of a Game as a JComponent.
+ */
 @Log
 @SuppressWarnings("serial")
-public class GamePanel extends JComponent
+public final class GamePanel extends JComponent
     implements Observer, MouseMotionListener, MouseListener, KeyListener {
 
-    private static final Color BACK = new Color(  0, 102, 153);
+    private static final Color BACK = new Color(0, 102, 153);
     private static final Color FORE = new Color(255, 255, 255);
-    private static final Color FILL = new Color(  0,  51, 153);
+    private static final Color FILL = new Color(0,  51, 153);
     private static final Color SCORE = Color.BLACK;
 
     private static final Font SCORE_FONT
@@ -46,6 +46,7 @@ public class GamePanel extends JComponent
     private static final Font GAME_OVER_FONT
         = new Font(Font.SANS_SERIF, Font.PLAIN, 3);
 
+    /** Scale up game units by this amount. */
     public static final float SCALE = 10;
     private static final Stroke STROKE = new BasicStroke((2f / SCALE));
 
@@ -56,7 +57,10 @@ public class GamePanel extends JComponent
 
     private Path2D pointer = new Path2D.Double();
 
-    public GamePanel(Game game) {
+    /** Create a new panel displaying a game.
+     * @param game  the game to display
+     */
+    public GamePanel(final Game game) {
         this.game = game;
         Dimension d = new Dimension((int) (Game.WIDTH * SCALE),
                                     (int) (Game.HEIGHT * SCALE));
@@ -73,7 +77,7 @@ public class GamePanel extends JComponent
     }
 
     @Override
-    public void paintComponent(Graphics graphics) {
+    public void paintComponent(final Graphics graphics) {
         Graphics2D g = (Graphics2D) graphics;
         g.setColor(BACK);
         g.fillRect(0, 0, getWidth(), getHeight());
@@ -89,50 +93,45 @@ public class GamePanel extends JComponent
         g.scale(SCALE, SCALE);
 
         g.setColor(FORE);
-        for (Body body : game.getEdges()) {
-            Vec2 pos = body.getPosition();
-            float angle = body.getAngle();
-            Fixture fixture = body.getFixtureList();
-            while (fixture != null) {
-                Shape shape = fixture.getShape();
-                draw(g, (PolygonShape) shape, pos, angle);
-                fixture = fixture.getNext();
-            }
+        for (Edge e : game.getLiveEdges()) {
+            draw(g, e);
         }
 
-        for (Edge e : game.getOldedges()) {
+        for (Edge e : game.getDeadEdges()) {
             int age = (int) (game.getTick() - e.getDeathTick());
             if (age < Game.FPS) {
                 int alpha = 255 - age * 255 / Game.FPS;
                 g.setColor(new Color(FORE.getRed(), FORE.getGreen(),
                                      FORE.getBlue(), alpha));
-                drawEdge(g, e);
+                draw(g, e);
             }
         }
 
+        /* Draw active scores. */
         g.setFont(SCORE_FONT);
         g.setColor(SCORE);
-        for (Score s : game.getScores()) {
-            Vec2 pos = s.getPosition();
-            g.drawString("+" + s.getScore(), pos.x, pos.y);
+        for (Score s : game.getLiveScores()) {
+            draw(g, s);
         }
 
-        for (Score s : game.getOldscores()) {
+        /* Draw inactive scores. */
+        for (Score s : game.getDeadScores()) {
             int age = (int) (game.getTick() - s.getDeathTick());
             if (age < Game.FPS) {
                 int alpha = 255 - age * 255 / Game.FPS;
                 Color c = new Color(SCORE.getRed(), SCORE.getGreen(),
                                     SCORE.getBlue(), alpha);
                 g.setColor(c);
-                Vec2 pos = s.getPosition();
-                g.drawString("+" + s.getScore(), pos.x, pos.y);
+                draw(g, s);
             }
         }
 
+        /* Draw the game ball. */
         Body ball = game.getBall();
         Fixture ballfix = ball.getFixtureList();
         draw(g, (CircleShape) ballfix.getShape(), ball.getPosition());
 
+        /* Draw pointer. */
         if (game.ballStopped() && !game.isGameOver()) {
             AffineTransform at = new AffineTransform();
             Vec2 pos = game.getBall().getPosition();
@@ -141,6 +140,7 @@ public class GamePanel extends JComponent
             g.draw(at.createTransformedShape(pointer));
         }
 
+        /* Draw "Game Over" text. */
         if (game.isGameOver()) {
             String msg = "Game Over";
             log.info(msg);
@@ -152,14 +152,35 @@ public class GamePanel extends JComponent
         }
     }
 
-    private void drawEdge(Graphics2D g, Edge e) {
+    /**
+     * Draw a score.
+     * @param g  the graphics object
+     * @param s  the score to draw
+     */
+    private void draw(final Graphics2D g, final Score s) {
+        Vec2 pos = s.getPosition();
+        g.drawString("+" + s.getScore(), pos.x, pos.y);
+    }
+
+    /**
+     * Draw an edge.
+     * @param g  the graphics object
+     * @param e  the edge to draw
+     */
+    private void draw(final Graphics2D g, final Edge e) {
         Path2D line = new Path2D.Float();
         line.moveTo(e.getA().x, e.getA().y);
         line.lineTo(e.getB().x, e.getB().y);
         g.draw(line);
     }
 
-    private void draw(Graphics2D g, CircleShape s, Vec2 pos) {
+    /**
+     * Draw an a circle.
+     * @param g    the graphics object
+     * @param s    the circle to draw
+     * @param pos  The circle's position
+     */
+    private void draw(final Graphics2D g, final CircleShape s, final Vec2 pos) {
         double x = pos.x;
         double y = pos.y;
         double r = s.m_radius;
@@ -170,50 +191,36 @@ public class GamePanel extends JComponent
         g.draw(circle);
     }
 
-    private void draw(Graphics2D g, PolygonShape s, Vec2 pos, float angle) {
-        Path2D path = new Path2D.Float();
-        Vec2 first = s.getVertex(0);
-        path.moveTo(first.x, first.y);
-        for (int i = 1; i < s.getVertexCount(); i++) {
-            Vec2 v = s.getVertex(i);
-            path.lineTo(v.x, v.y);
-        }
-        AffineTransform at = new AffineTransform();
-        at.translate(pos.x, pos.y);
-        at.rotate(angle);
-        g.draw(at.createTransformedShape(path));
-    }
-
     @Override
-    public void update(Observable o, Object arg) {
+    public void update(final Observable o, final Object arg) {
         requestFocusInWindow();
         repaint();
     }
 
     @Override
-    public void mouseDragged(MouseEvent e) {
+    public void mouseDragged(final MouseEvent e) {
         mouseLast = new Vec2(e.getX() / SCALE, e.getY() / SCALE);
     }
 
     @Override
-    public void mouseMoved(MouseEvent e) {
+    public void mouseMoved(final MouseEvent e) {
         mouseLast = new Vec2(e.getX() / SCALE, e.getY() / SCALE);
     }
 
     @Override
-    public void	mouseClicked(MouseEvent e) {
+    public void mouseClicked(final MouseEvent e) {
     }
 
     @Override
-    public void mouseEntered(MouseEvent e) {
+    public void mouseEntered(final MouseEvent e) {
     }
 
     @Override
-    public void mouseExited(MouseEvent e) {
+    public void mouseExited(final MouseEvent e) {
     }
 
     @Override
-    public void mousePressed(MouseEvent e) {
+    public void mousePressed(final MouseEvent e) {
         if (game.isGameOver()) {
             game.reset();
         } else if (game.ballStopped()) {
@@ -225,20 +232,20 @@ public class GamePanel extends JComponent
     }
 
     @Override
-    public void mouseReleased(MouseEvent e) {
+    public void mouseReleased(final MouseEvent e) {
     }
 
     @Override
-    public void keyPressed(KeyEvent e) {
+    public void keyPressed(final KeyEvent e) {
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
+    public void keyReleased(final KeyEvent e) {
     }
 
     @Override
-    public void keyTyped(KeyEvent e) {
-        if (e.getKeyChar() == 'g') {
+    public void keyTyped(final KeyEvent e) {
+         if (e.getKeyChar() == 'g') {
             game.generate();
         } else if (e.getKeyChar() == 'r') {
             game.reset();

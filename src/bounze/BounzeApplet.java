@@ -3,9 +3,13 @@ package bounze;
 import javax.swing.BoxLayout;
 import javax.swing.JApplet;
 
+/**
+ * Run the game as an applet.
+ */
 @SuppressWarnings("serial")
 public class BounzeApplet extends JApplet {
 
+    /** The game object. */
     private Game game;
 
     @Override

@@ -5,10 +5,21 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import lombok.extern.java.Log;
 
+/**
+ * Launch the game as a standalone application.
+ */
 @Log
-public class Launcher {
+public final class Launcher {
 
-    public static void main(String[] args) {
+    /** Hidden constructor. */
+    private Launcher() {
+    }
+
+    /**
+     * The main method.
+     * @param args command line arguments
+     */
+    public static void main(final String[] args) {
         try {
             /* Fix for poor OpenJDK performance. */
             System.setProperty("sun.java2d.pmoffscreen", "false");
